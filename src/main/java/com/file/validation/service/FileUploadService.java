@@ -2,21 +2,16 @@ package com.file.validation.service;
 
 import com.file.validation.controller.FileUploadController;
 import com.file.validation.model.RecordDesc;
+import com.file.validation.model.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
+
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -29,7 +24,8 @@ public class FileUploadService {
 
     public List<RecordDesc> manipulateCSV(MultipartFile file) throws IOException{
         LOGGER.info("FileUploadService:::manipulateCSV:::");
-        List<RecordDesc> recordDescList = new ArrayList<>();
+
+        List<RecordDesc> recordDescCSVList = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             String line;
             boolean firstLine = true;
@@ -38,7 +34,6 @@ public class FileUploadService {
                     firstLine = false;
                     continue;
                 }
-
                 String[] parts = line.split(",");
                 String refNo = validateNullCheck(parts[0]);
                 String accountNo = validateNullCheck(parts[1]);
@@ -54,44 +49,26 @@ public class FileUploadService {
                 recordDesc.setStartBalance(Double.parseDouble(startBalance));
                 recordDesc.setMutation(Double.parseDouble(mutation));
                 recordDesc.setEndBalance(Double.parseDouble(endBalance));
-                LOGGER.info("FileUploadService:::recordDesc::{}", recordDesc);
-                recordDescList.add(recordDesc);
+                LOGGER.info("FileUploadService:::manipulateCSV:::recordDesc::{}", recordDesc);
+                recordDescCSVList.add(recordDesc);
             }
         }
-        return recordDescList;
+        return recordDescCSVList;
     }
 
-    public String manipulateXML(MultipartFile file) throws IOException{
+    public List<Records> manipulateXML(MultipartFile file) throws IOException{
+        LOGGER.info("FileUploadService:::manipulateXML:::");
+        List<Records> recordDescXMLList = new ArrayList<>();
         try {
-//            InputStream is = file.getInputStream();
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-
-           /* int ch;
-            StringBuilder sb = new StringBuilder();
-            while((ch= is.read()) !=-1)
-                sb.append((char)ch);
-
-            LOGGER.info("manipulateXML:::sb::{}", sb.toString());*/
-
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            ByteArrayInputStream bis = new ByteArrayInputStream(file.getBytes());
-            Document doc = dBuilder.parse(bis);
-            //Document doc = dBuilder.parse("C:\\Use\\Others\\archive\\assignment\\records.xml");
-            doc.getDocumentElement().normalize();
-            NodeList nList = doc.getElementsByTagName("records");
-
-            for (int i = 0; i < nList.getLength(); i++) {
-                Node nNode = nList.item(i);
-                if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-                    Element eElement = (Element) nNode;
-                    LOGGER.info("FileUploadService:::recordDesc::{}", eElement.getAttribute("record"));
-                }
-            }
-
+            JAXBContext jaxbContext = JAXBContext.newInstance(Records.class);
+            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+            Records records = (Records) unmarshaller.unmarshal(file.getInputStream());
+            LOGGER.info("FileUploadService:::manipulateXML:::records::{}", records);
+            recordDescXMLList.add(records);
         }catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return recordDescXMLList;
     }
 
     private String validateNullCheck(String param){
