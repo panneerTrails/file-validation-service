@@ -2,12 +2,13 @@ package com.file.validation.model;
 
 public class RecordDesc {
 
-    public long reference;
-    public String accountNumber;
-    public String description;
-    public double startBalance;
-    public double mutation;
-    public double endBalance;
+    private long reference;
+    private String accountNumber;
+    private String description;
+    private double startBalance;
+    private double mutation;
+    private double endBalance;
+    private boolean isValid;
 
     public long getReference() {
         return reference;
@@ -63,6 +64,15 @@ public class RecordDesc {
         return this;
     }
 
+    public boolean isValid() {
+        return isValid;
+    }
+
+    public RecordDesc setValid(boolean valid) {
+        isValid = valid;
+        return this;
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("RecordDesc{");
@@ -72,6 +82,7 @@ public class RecordDesc {
         sb.append(", startBalance=").append(startBalance);
         sb.append(", mutation=").append(mutation);
         sb.append(", endBalance=").append(endBalance);
+        sb.append(", isValid=").append(isValid);
         sb.append('}');
         return sb.toString();
     }

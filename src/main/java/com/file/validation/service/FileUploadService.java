@@ -1,6 +1,6 @@
 package com.file.validation.service;
 
-import com.file.validation.controller.FileUploadController;
+import com.file.validation.model.Record;
 import com.file.validation.model.RecordDesc;
 import com.file.validation.model.Records;
 import org.slf4j.Logger;
@@ -14,13 +14,20 @@ import javax.xml.bind.Unmarshaller;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FileUploadService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadController.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadService.class);
+    private static final NumberFormat formatter = new DecimalFormat("#0.00");
+    private static final String CSV = "csv";
 
     public List<RecordDesc> manipulateCSV(MultipartFile file) throws IOException{
         LOGGER.info("FileUploadService:::manipulateCSV:::");
@@ -49,29 +56,71 @@ public class FileUploadService {
                 recordDesc.setStartBalance(Double.parseDouble(startBalance));
                 recordDesc.setMutation(Double.parseDouble(mutation));
                 recordDesc.setEndBalance(Double.parseDouble(endBalance));
-                LOGGER.info("FileUploadService:::manipulateCSV:::recordDesc::{}", recordDesc);
                 recordDescCSVList.add(recordDesc);
             }
         }
         return recordDescCSVList;
     }
 
-    public List<Records> manipulateXML(MultipartFile file) throws IOException{
+    public List<RecordDesc> manipulateXML(MultipartFile file) throws IOException{
         LOGGER.info("FileUploadService:::manipulateXML:::");
-        List<Records> recordDescXMLList = new ArrayList<>();
+        List<RecordDesc> recordDescXMLList = new ArrayList<>();
         try {
             JAXBContext jaxbContext = JAXBContext.newInstance(Records.class);
             Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
             Records records = (Records) unmarshaller.unmarshal(file.getInputStream());
-            LOGGER.info("FileUploadService:::manipulateXML:::records::{}", records);
-            recordDescXMLList.add(records);
+
+            for(Record record: records.getRecord()){
+                RecordDesc recordDesc = new RecordDesc();
+                recordDesc.setReference(Long.parseLong(validateNullCheck(record.getReference(), "0")));
+                recordDesc.setAccountNumber(record.getAccountNumber());
+                recordDesc.setDescription(record.getDescription());
+                recordDesc.setStartBalance(Double.parseDouble(record.getStartBalance()));
+                recordDesc.setMutation(Double.parseDouble(record.getMutation()));
+                recordDesc.setEndBalance(Double.parseDouble(record.getEndBalance()));
+                recordDescXMLList.add(recordDesc);
+            }
+
         }catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.info("FileUploadService:::manipulateXML:::Exception", e);
         }
         return recordDescXMLList;
     }
 
-    private String validateNullCheck(String param){
-        return param == null?"":param;
+    public List<RecordDesc> validateInput(MultipartFile file, String fileType) throws IOException {
+        LOGGER.info("FileUploadService:::validateInput:::");
+
+        List<RecordDesc> failedRecordList = new ArrayList<>();
+        List<RecordDesc> recordDescList;
+        Map<Long, RecordDesc> recordDescHashMap = new HashMap<>();
+        if(CSV.equalsIgnoreCase(fileType)){
+            recordDescList =  manipulateCSV(file);
+        }else {
+            recordDescList = manipulateXML(file);
+        }
+
+        //Identifying Unique reference number and adding those records in a HashMap
+        for (RecordDesc recordDesc: recordDescList) {
+            if (recordDescHashMap.get(recordDesc.getReference()) == null){
+               recordDesc.setValid(Double.parseDouble(formatter.format((recordDesc.getStartBalance() + recordDesc.getMutation()))) == Double.parseDouble(formatter.format(recordDesc.getEndBalance())));
+                recordDescHashMap.put(recordDesc.getReference(), recordDesc);
+            }
+        }
+
+        //Iterating HashMap and validating the Records
+        for(Iterator<Long> iterator = recordDescHashMap.keySet().iterator(); iterator.hasNext(); ){
+            Long refNo = iterator.next();
+            if (!recordDescHashMap.get(refNo).isValid()){
+                failedRecordList.add(recordDescHashMap.get(refNo));
+            }
+        }
+        return failedRecordList;
     }
+    private String validateNullCheck(String param){
+        return validateNullCheck(param, "");
+    }
+    private String validateNullCheck(String param, String defaultValue){
+        return param == null?defaultValue:param;
+    }
+
 }

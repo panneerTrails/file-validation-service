@@ -1,5 +1,7 @@
 package com.file.validation.model;
 
+import javax.xml.bind.annotation.XmlAttribute;
+
 public class Record
 {
     private String accountNumber;
@@ -69,6 +71,7 @@ public class Record
         return reference;
     }
 
+    @XmlAttribute(name = "reference")
     public void setReference (String reference)
     {
         this.reference = reference;
