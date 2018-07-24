@@ -3,6 +3,7 @@ package com.file.validation.controller;
 import com.file.validation.exception.UnsupportedFormatException;
 import com.file.validation.model.RecordDesc;
 import com.file.validation.service.FileUploadService;
+import io.swagger.annotations.ApiImplicitParam;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 
 import org.slf4j.Logger;
@@ -13,9 +14,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -37,11 +38,14 @@ public class FileUploadController {
     @Autowired
     FileUploadService fileUploadService;
 
+    @ApiImplicitParam(dataType = "file", name = "records", required = true, paramType = "form")
     @RequestMapping(value = "/upload", method = RequestMethod.POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<List<RecordDesc>> handleFileUpload(@RequestParam("file") MultipartFile file) throws IOException, FileUploadException {
+    public ResponseEntity<List<RecordDesc>> handleFileUpload(MultipartHttpServletRequest request) throws IOException, FileUploadException {
 
         List<RecordDesc> reportList = null;
         LOGGER.info("FileUploadController::handleFileUpload");
+
+        MultipartFile file = request.getFile("records");
 
         String fileName = file.getOriginalFilename();
         String fileType = file.getContentType();
