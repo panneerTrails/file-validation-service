@@ -1,55 +1,84 @@
 package com.file.validation.controller;
 
-import com.file.validation.model.RecordDesc;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.multipart.MultipartFile;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import com.file.validation.exception.UnsupportedFormatException;
+import com.file.validation.model.RecordDesc;
+import com.file.validation.service.FileUploadService;
 
 @RunWith(SpringRunner.class)
-@WebMvcTest(FileUploadController.class)
+@SpringBootTest
 public class FileUploadControllerTest {
 
-    private MockMvc mockMvc;
+   
+    @InjectMocks
+    FileUploadController fileUploadController;
 
-    @Autowired
-    WebApplicationContext wContext;
-
-    @MockBean
-    private FileUploadController fileUploadController;
-
-    @Before
-    public void setup() {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(wContext)
-                .alwaysDo(MockMvcResultHandlers.print())
-                .build();
-    }
+    @Mock
+    FileUploadService fileUploadService;
 
     @Test
-    public void test() throws Exception {
-
-
+    public void valid_csv() throws Exception {
+    	File csvFile = new File(this.getClass().getResource("/records.csv").getFile());
+		InputStream is = new FileInputStream(csvFile);
+		MockMultipartFile multipartFile = new MockMultipartFile("csv", "records.csv", "application/octet-stream", is);
+		is.close();
+		List<RecordDesc> records = new ArrayList<RecordDesc>();
+		Mockito.when(fileUploadService.validateInput(multipartFile, "csv")).thenReturn(records);
+		ResponseEntity<List<RecordDesc>> result = fileUploadController.handleFileUpload(multipartFile);
+		assertEquals(HttpStatus.OK, result.getStatusCode());
     }
+    
+    @Test
+    public void valid_xml() throws Exception {
+    	File xmlFile = new File(this.getClass().getResource("/records.xml").getFile());
+		InputStream is = new FileInputStream(xmlFile);
+		MockMultipartFile multipartFile = new MockMultipartFile("xml", "records.xml", "text/xml", is);
+		is.close();
+		List<RecordDesc> records = new ArrayList<RecordDesc>();
+		Mockito.when(fileUploadService.validateInput(multipartFile,"xml")).thenReturn(records);
+		ResponseEntity<List<RecordDesc>> result = fileUploadController.handleFileUpload(multipartFile);
+		assertEquals(HttpStatus.OK, result.getStatusCode());
+    }
+    
+    @Test(expected = UnsupportedFormatException.class)
+    public void unsupportedFormat_Input() throws Exception {
+    	File txtFile = new File(this.getClass().getResource("/new.txt").getFile());
+		InputStream is = new FileInputStream(txtFile);
+		MockMultipartFile multipartFile = new MockMultipartFile("txt", "new.txt", "null", is);
+		is.close();
+		ResponseEntity<List<RecordDesc>> result = fileUploadController.handleFileUpload(multipartFile);		
+	}  
+    
+    @Test
+    public void fileEmpty_Input() throws Exception {
+    	File txtFile = new File(this.getClass().getResource("/records_emptyFile.xml").getFile());
+		InputStream is = new FileInputStream(txtFile);
+		MockMultipartFile multipartFile = new MockMultipartFile("xml", "records_emptyFile.xml", "text/xml", is);
+		is.close();
+		ResponseEntity<List<RecordDesc>> result = fileUploadController.handleFileUpload(multipartFile);		
+		assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+	} 
+    
+   
+   
 
 
 }

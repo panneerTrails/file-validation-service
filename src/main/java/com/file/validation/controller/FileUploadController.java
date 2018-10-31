@@ -1,11 +1,11 @@
 package com.file.validation.controller;
 
-import com.file.validation.exception.UnsupportedFormatException;
-import com.file.validation.model.RecordDesc;
-import com.file.validation.service.FileUploadService;
-import io.swagger.annotations.ApiImplicitParam;
-import org.apache.tomcat.util.http.fileupload.FileUploadException;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,14 +14,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.file.validation.exception.UnsupportedFormatException;
+import com.file.validation.model.RecordDesc;
+import com.file.validation.service.FileUploadService;
+
+import io.swagger.annotations.ApiImplicitParam;
 
 @RestController
 @RequestMapping("/FileUpload")
@@ -30,7 +31,7 @@ public class FileUploadController {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadController.class);
 
     private static final String xmlFormat="text/xml";
-    private static final String csvFormat="application/vnd.ms-excel";
+    private static final String csvFormat="application/octet-stream";
 
     private static final String xmlValue = "xml";
     private static final String csvValue = "csv";
@@ -40,15 +41,16 @@ public class FileUploadController {
 
     @ApiImplicitParam(dataType = "file", name = "records", required = true, paramType = "form")
     @RequestMapping(value = "/upload", method = RequestMethod.POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<List<RecordDesc>> handleFileUpload(MultipartHttpServletRequest request) throws IOException, FileUploadException {
+    public ResponseEntity<List<RecordDesc>> handleFileUpload(@RequestParam("records") MultipartFile file) throws IOException, FileUploadException {
 
         List<RecordDesc> reportList = null;
-        LOGGER.info("FileUploadController::handleFileUpload");
-
-        MultipartFile file = request.getFile("records");
+        LOGGER.info("FileUploadController::handleFileUpload");        
 
         String fileName = file.getOriginalFilename();
         String fileType = file.getContentType();
+        
+        LOGGER.info("FileUploadController::fileName:{}"+fileName);
+        LOGGER.info("FileUploadController::fileType:{}"+fileType);
 
         Map<String, String> result = new HashMap<>();
 
